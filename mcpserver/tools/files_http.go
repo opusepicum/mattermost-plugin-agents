@@ -18,14 +18,16 @@ import (
 // permission check and admin-API extraction stay inside the plugin.
 type HTTPFileContentService struct {
 	pluginURL string
+	token     string
 	client    *http.Client
 }
 
 // NewHTTPFileContentService creates a new HTTP-based file content service.
 // pluginURL should be the base URL to the plugin, e.g., "https://mattermost.example.com/plugins/mattermost-ai"
-func NewHTTPFileContentService(pluginURL string) *HTTPFileContentService {
+func NewHTTPFileContentService(pluginURL, token string) *HTTPFileContentService {
 	return &HTTPFileContentService{
 		pluginURL: pluginURL,
+		token:     token,
 		client:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
@@ -53,7 +55,7 @@ type httpFileContentResponse struct {
 // GetContent reads a ranged slice of a file's text via the plugin's endpoint.
 func (s *HTTPFileContentService) GetContent(ctx context.Context, userID, fileID string, offset, limit int) (files.Content, error) {
 	reqBody := httpFileContentRequest{FileID: fileID, Offset: offset, Limit: limit}
-	status, respBody, err := postPluginJSON(ctx, s.client, s.pluginURL+"/api/v1/files/content", reqBody, userID)
+	status, respBody, err := postPluginJSON(ctx, s.client, s.pluginURL+"/files/content", reqBody, userID, s.token)
 	if err != nil {
 		return files.Content{}, err
 	}

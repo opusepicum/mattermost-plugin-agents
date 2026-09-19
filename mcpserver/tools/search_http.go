@@ -16,14 +16,16 @@ import (
 // This allows external MCP servers (HTTP, Stdio) to access semantic search capabilities.
 type HTTPSemanticSearchService struct {
 	pluginURL string
+	token     string
 	client    *http.Client
 }
 
 // NewHTTPSemanticSearchService creates a new HTTP-based semantic search service.
 // pluginURL should be the base URL to the plugin, e.g., "https://mattermost.example.com/plugins/mattermost-ai"
-func NewHTTPSemanticSearchService(pluginURL string) *HTTPSemanticSearchService {
+func NewHTTPSemanticSearchService(pluginURL, token string) *HTTPSemanticSearchService {
 	return &HTTPSemanticSearchService{
 		pluginURL: pluginURL,
+		token:     token,
 		client: &http.Client{
 			Timeout: 30_000_000_000, // 30 seconds in nanoseconds
 		},
@@ -74,7 +76,7 @@ func (s *HTTPSemanticSearchService) Search(ctx context.Context, query string, op
 		Offset:    opts.Offset,
 	}
 
-	status, respBody, err := postPluginJSON(ctx, s.client, s.pluginURL+"/api/v1/search/raw", reqBody, "")
+	status, respBody, err := postPluginJSON(ctx, s.client, s.pluginURL+"/search/raw", reqBody, "", s.token)
 	if err != nil {
 		return nil, err
 	}

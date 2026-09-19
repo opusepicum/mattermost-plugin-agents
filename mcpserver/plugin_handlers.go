@@ -139,8 +139,8 @@ func (h *PluginMCPHandlers) buildServer() *mcp.Server {
 
 	authProvider := auth.NewSessionAuthenticationProvider(h.siteURL, h.internalURL, h.logger)
 	pluginURL := strings.TrimRight(h.siteURL, "/") + "/plugins/mattermost-ai"
-	searchService := tools.NewHTTPSemanticSearchService(pluginURL)
-	fileContentService := tools.NewHTTPFileContentService(pluginURL)
+	searchService := tools.NewHTTPSemanticSearchService(pluginURL, "")
+	fileContentService := tools.NewHTTPFileContentService(pluginURL, "")
 
 	toolProvider := tools.NewMattermostToolProvider(
 		authProvider,

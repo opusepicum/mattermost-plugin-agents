@@ -23,6 +23,7 @@ func TestHTTPFileContentService_GetContent(t *testing.T) {
 		name           string
 		serverHandler  http.HandlerFunc
 		userID         string
+		fallbackToken string
 		ctxSetup       func(context.Context) context.Context
 		expectError    bool
 		expectForbid   bool
@@ -104,6 +105,20 @@ func TestHTTPFileContentService_GetContent(t *testing.T) {
 			},
 		},
 		{
+			name: "authorization falls back to the service token when context lacks one",
+			serverHandler: func(w http.ResponseWriter, _ *http.Request) {
+				_ = json.NewEncoder(w).Encode(httpFileContentResponse{HasText: true})
+			},
+			userID:        "param-user",
+			fallbackToken: "stdio-pat",
+			validateReq: func(t *testing.T, r *http.Request) {
+				// STDIO mode has no per-request context token: the server's
+				// personal access token must still authenticate the callback,
+				// or the plugin rejects it with a bodyless 401.
+				assert.Equal(t, "Bearer stdio-pat", r.Header.Get("Authorization"))
+			},
+		},
+		{
 			name: "user id header falls back to the param when context lacks it",
 			serverHandler: func(w http.ResponseWriter, _ *http.Request) {
 				_ = json.NewEncoder(w).Encode(httpFileContentResponse{HasText: true})
@@ -126,7 +141,7 @@ func TestHTTPFileContentService_GetContent(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(httpFileContentResponse{HasText: true})
 			},
 			validateReq: func(t *testing.T, r *http.Request) {
-				assert.Equal(t, "/api/v1/files/content", r.URL.Path)
+				assert.Equal(t, "/files/content", r.URL.Path)
 				assert.Equal(t, http.MethodPost, r.Method)
 				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 			},
@@ -143,7 +158,7 @@ func TestHTTPFileContentService_GetContent(t *testing.T) {
 			}))
 			defer server.Close()
 
-			svc := NewHTTPFileContentService(server.URL)
+			svc := NewHTTPFileContentService(server.URL, tc.fallbackToken)
 
 			ctx := context.Background()
 			if tc.ctxSetup != nil {

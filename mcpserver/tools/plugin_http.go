@@ -20,7 +20,7 @@ import (
 // code and raw body; callers decode the body and map status codes themselves.
 // This centralizes the request plumbing shared by the HTTP-backed capability
 // services (semantic search, file content) so a new one is a thin wrapper.
-func postPluginJSON(ctx context.Context, client *http.Client, url string, reqBody any, fallbackUserID string) (int, []byte, error) {
+func postPluginJSON(ctx context.Context, client *http.Client, url string, reqBody any, fallbackUserID, fallbackToken string) (int, []byte, error) {
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -32,8 +32,14 @@ func postPluginJSON(ctx context.Context, client *http.Client, url string, reqBod
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	// HTTP transport authenticates per request and puts the caller's token in
+	// the context. STDIO has no per-request context, so fall back to the
+	// server's own personal access token -- without it the plugin rejects the
+	// callback with a bodyless 401 before routing.
 	if token, ok := ctx.Value(auth.AuthTokenContextKey).(string); ok && token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	} else if fallbackToken != "" {
+		req.Header.Set("Authorization", "Bearer "+fallbackToken)
 	}
 	if ctxUserID, ok := ctx.Value(auth.UserIDContextKey).(string); ok && ctxUserID != "" {
 		req.Header.Set("Mattermost-User-Id", ctxUserID)
